@@ -1,0 +1,88 @@
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const helmet = require('helmet'); 
+const mongoSanitize = require('express-mongo-sanitize'); 
+const rateLimit = require('express-rate-limit'); 
+require('dotenv').config();
+
+// --- IMPORTACIÓN DE MODELOS ---
+const Contact = require('./models/Contact');
+const Project = require('./models/Project'); 
+
+const app = express();
+
+// --- 1. MIDDLEWARES DE SEGURIDAD ---
+
+// Helmet: Configura cabeceras HTTP seguras para prevenir ataques como XSS
+app.use(helmet());
+
+// Mongo Sanitize: Elimina caracteres especiales que podrían inyectar comandos NoSQL
+app.use(mongoSanitize());
+
+// Rate Limit: Protege la API de ataques de fuerza bruta (100 peticiones cada 15 min por IP)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  message: { message: "Demasiados intentos, por favor intente más tarde." }
+});
+app.use('/api/', limiter);
+
+// CORS: Permite comunicación solo con tu Frontend en desarrollo
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
+
+// Body Parser: Limita el tamaño del JSON recibido a 10kb por seguridad
+app.use(express.json({ limit: '10kb' }));
+
+// --- 2. CONEXIÓN A LA BASE DE DATOS ---
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ Conexión segura a MongoDB Atlas'))
+    .catch(err => console.error('❌ Error de conexión:', err));
+
+// --- 3. RUTAS (Endpoints) ---
+
+// Salud del servidor (Health Check)
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Servidor seguro funcionando 🚀' });
+});
+
+// OBTENER PROYECTOS (GET)
+app.get('/api/projects', async (req, res) => {
+    try {
+        const projects = await Project.find().sort({ date: -1 });
+        res.json(projects);
+    } catch (error) {
+        console.error("Error al obtener proyectos:", error);
+        res.status(500).json({ message: "Error al obtener proyectos" });
+    }
+});
+
+// ENVIAR CONTACTO (POST)
+app.post('/api/contact', async (req, res) => {
+    try {
+        const { name, email, message } = req.body;
+        
+        if (!name || !email || !message) {
+            return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
+        }
+
+        const newContact = new Contact({ name, email, message });
+        await newContact.save();
+
+        console.log(`📩 Nuevo mensaje de: ${name}`);
+        res.status(201).json({ success: true, message: '¡Mensaje guardado con éxito! 🚀' });
+    } catch (error) {
+        console.error('Error al guardar contacto:', error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+});
+
+// --- 4. ARRANQUE DEL SERVIDOR ---
+const PORT = process.env.PORT || 5001; 
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor Seguro corriendo en http://localhost:${PORT}`);
+});
