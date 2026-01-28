@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
+import axios from "axios"; // Asegúrate de importar axios
 
 const ContactForm = () => {
   const [status, setStatus] = useState({ loading: false, message: "", type: "" });
@@ -9,26 +10,20 @@ const ContactForm = () => {
     setStatus({ loading: true, message: "", type: "" });
 
     try {
-      const response = await fetch('http://localhost:5001/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      // Cambiamos fetch por axios.post apuntando a tu servidor local en la Mac
+      const response = await axios.post('http://localhost:5001/api/contact', data);
 
-      const result = await response.json();
-
-      if (result.success) {
+      // Axios guarda la respuesta en .data automáticamente
+      if (response.status === 200 || response.status === 201) {
         setStatus({ 
           loading: false, 
           message: "¡Mensaje enviado con éxito! 🚀", 
           type: "success" 
         });
         reset(); 
-      } else {
-        throw new Error(result.message || "Error al enviar");
       }
     } catch (error) {
-      console.error("Error conectando con el backend:", error);
+      console.error("Error conectando con el backend:", error.response?.data || error.message);
       setStatus({ 
         loading: false, 
         message: "Error de conexión con el servidor ❌", 
@@ -99,7 +94,6 @@ const ContactForm = () => {
           {errors.message && <span className="text-red-500 text-xs mt-1 block">{errors.message.message}</span>}
         </div>
 
-        {/* Botón de envío */}
         <button 
           type="submit" 
           disabled={status.loading}

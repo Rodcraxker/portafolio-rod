@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
+
+// Importación de Modelos
 const Project = require('./models/Project');
+const User = require('./models/User');
 
 const projects = [
   {
@@ -41,21 +45,50 @@ const projects = [
   }
 ];
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("🌱 Conectando a MongoDB para sembrar datos...");
-    
-    // 1. Borramos lo que exista para no duplicar
+const seedDatabase = async () => {
+  try {
+    // 1. Conexión a la base de datos
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("🌱 Conectado a MongoDB Atlas para sembrado completo...");
+
+    // --- SECCIÓN PROYECTOS ---
     await Project.deleteMany({});
     console.log("🗑️  Base de datos de proyectos limpiada.");
-
-    // 2. Insertamos los nuevos
-    await Project.insertMany(projects);
-    console.log("✅ ¡Éxito! Se han insertado " + projects.length + " proyectos.");
     
-    process.exit(); // Cerramos el proceso
-  })
-  .catch(err => {
-    console.error("❌ Error durante el semillado:", err);
+    await Project.insertMany(projects);
+    console.log(`✅ ¡Éxito! Se han insertado ${projects.length} proyectos.`);
+
+    // --- SECCIÓN ADMINISTRADOR ---
+    const adminEmail = "rodmunoz28@gmail.com";
+    const adminPassword = "Rod2801@"; 
+
+    // Verificamos si ya existe para no duplicar
+    const existingUser = await User.findOne({ email: adminEmail });
+    
+    if (!existingUser) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(adminPassword, salt);
+
+      const newAdmin = new User({
+        email: adminEmail,
+        password: hashedPassword
+      });
+
+      await newAdmin.save();
+      console.log('🚀 ¡Admin creado con éxito!');
+      console.log('Email:', adminEmail);
+      console.log('Password:', adminPassword);
+    } else {
+      console.log('⚠️ El usuario administrador ya existe en la base de datos.');
+    }
+
+    console.log("✨ Proceso de sembrado finalizado correctamente.");
+    process.exit();
+
+  } catch (error) {
+    console.error("❌ Error durante el semillado:", error);
     process.exit(1);
-  });
+  }
+};
+
+seedDatabase();
