@@ -8,14 +8,27 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
-// --- IMPORTACIÓN DE MODELOS ---
 const Contact = require('./models/Contact');
 const Project = require('./models/Project');
 const User = require('./models/User');
 
 const app = express();
 
-// --- 1. MIDDLEWARES DE SEGURIDAD (Requisito 3 y 6) ---
+// --- 1. MIDDLEWARES DE SEGURIDAD Y CORS DEFINITIVO ---
+
+// Reemplazamos la librería cors por este bloque manual que es infalible
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Permite cualquier origen (Vercel dinámico)
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Si es una petición de verificación (OPTIONS), respondemos 200 inmediatamente
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(helmet());
 
 const limiter = rateLimit({
@@ -25,17 +38,9 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(cors({
-  origin: '*', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json()); // Middleware para leer JSON
-
 app.use(express.json({ limit: '10kb' }));
 
-// --- 2. CONEXIÓN A LA BASE DE DATOS (Requisito 5) ---
+// --- 2. CONEXIÓN A LA BASE DE DATOS ---
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Conexión segura a MongoDB Atlas'))
     .catch(err => console.error('❌ Error de conexión:', err));
@@ -50,7 +55,7 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Servidor funcionando 🚀' });
 });
 
-// LOGIN (Requisito 4)
+// LOGIN
 app.post('/api/auth/login', [
   body('email').isEmail().withMessage('Debe ser un email válido'),
   body('password').notEmpty().withMessage('La contraseña es obligatoria')
@@ -97,9 +102,7 @@ app.post('/api/contact', [
   }
 });
 
-// --- 4. RUTAS ADMINISTRATIVAS (Requisito 1) ---
-
-// OBTENER MENSAJES
+// --- 4. RUTAS ADMINISTRATIVAS ---
 app.get('/api/admin/messages', async (req, res, next) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
@@ -109,7 +112,6 @@ app.get('/api/admin/messages', async (req, res, next) => {
   }
 });
 
-// ELIMINAR MENSAJE
 app.delete('/api/admin/messages/:id', async (req, res, next) => {
   try {
     const deleted = await Contact.findByIdAndDelete(req.params.id);
@@ -120,7 +122,6 @@ app.delete('/api/admin/messages/:id', async (req, res, next) => {
   }
 });
 
-// --- 5. MANEJO DE ERRORES (Debe ir al final) ---
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
