@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const helmet = require('helmet'); 
-const mongoSanitize = require('express-mongo-sanitize'); 
+// const mongoSanitize = require('express-mongo-sanitize'); // SE COMENTÓ POR INCOMPATIBILIDAD
 const rateLimit = require('express-rate-limit'); 
 require('dotenv').config();
 
@@ -14,13 +14,13 @@ const app = express();
 
 // --- 1. MIDDLEWARES DE SEGURIDAD ---
 
-// Helmet: Configura cabeceras HTTP seguras para prevenir ataques como XSS
+// Helmet: Configura cabeceras HTTP seguras
 app.use(helmet());
 
-// Mongo Sanitize: Elimina caracteres especiales que podrían inyectar comandos NoSQL
-app.use(mongoSanitize());
+// Mongo Sanitize: DESACTIVADO TEMPORALMENTE
+// app.use(mongoSanitize()); 
 
-// Rate Limit: Protege la API de ataques de fuerza bruta (100 peticiones cada 15 min por IP)
+// Rate Limit: Protege la API
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 100,
@@ -28,14 +28,14 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// CORS: Permite comunicación solo con tu Frontend en desarrollo
+// CORS: ¡OJO AQUÍ! Cambia localhost por la URL de tu portafolio en Vercel después
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: '*', // Cambiado a '*' temporalmente para que no te dé errores de conexión
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// Body Parser: Limita el tamaño del JSON recibido a 10kb por seguridad
+// Body Parser
 app.use(express.json({ limit: '10kb' }));
 
 // --- 2. CONEXIÓN A LA BASE DE DATOS ---
@@ -45,7 +45,12 @@ mongoose.connect(process.env.MONGO_URI)
 
 // --- 3. RUTAS (Endpoints) ---
 
-// Salud del servidor (Health Check)
+// Ruta raíz para evitar el "Internal Server Error" al entrar al link directo
+app.get('/', (req, res) => {
+    res.send('🚀 Servidor de Rod funcionando correctamente');
+});
+
+// Salud del servidor
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Servidor seguro funcionando 🚀' });
 });
@@ -84,5 +89,5 @@ app.post('/api/contact', async (req, res) => {
 // --- 4. ARRANQUE DEL SERVIDOR ---
 const PORT = process.env.PORT || 5001; 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor Seguro corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor Seguro corriendo en el puerto ${PORT}`);
 });
