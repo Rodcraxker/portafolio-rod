@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -8,28 +7,29 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
+// --- IMPORTACIÓN DE MODELOS ---
 const Contact = require('./models/Contact');
 const Project = require('./models/Project');
 const User = require('./models/User');
 
 const app = express();
 
-// --- 1. MIDDLEWARES DE SEGURIDAD Y CORS DEFINITIVO ---
-
-// Reemplazamos la librería cors por este bloque manual que es infalible
+// --- 1. CONFIGURACIÓN DE CORS MANUAL (ELIMINA BLOQUEOS DE VERCEL) ---
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Permite cualquier origen (Vercel dinámico)
+  res.header('Access-Control-Allow-Origin', '*'); 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   
-  // Si es una petición de verificación (OPTIONS), respondemos 200 inmediatamente
+  // Responder inmediatamente a la petición de verificación (OPTIONS)
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
 
+// --- 2. MIDDLEWARES DE SEGURIDAD ---
 app.use(helmet());
+app.use(express.json({ limit: '10kb' }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
@@ -38,14 +38,12 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(express.json({ limit: '10kb' }));
-
-// --- 2. CONEXIÓN A LA BASE DE DATOS ---
+// --- 3. CONEXIÓN A LA BASE DE DATOS ---
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Conexión segura a MongoDB Atlas'))
     .catch(err => console.error('❌ Error de conexión:', err));
 
-// --- 3. RUTAS PÚBLICAS ---
+// --- 4. RUTAS PÚBLICAS ---
 
 app.get('/', (req, res) => {
     res.send('🚀 Servidor de Rod funcionando correctamente');
@@ -55,7 +53,7 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Servidor funcionando 🚀' });
 });
 
-// LOGIN
+// LOGIN (Procesa la entrada del Admin)
 app.post('/api/auth/login', [
   body('email').isEmail().withMessage('Debe ser un email válido'),
   body('password').notEmpty().withMessage('La contraseña es obligatoria')
@@ -76,6 +74,7 @@ app.post('/api/auth/login', [
   }
 });
 
+// OBTENER PROYECTOS (Para el Portafolio)
 app.get('/api/projects', async (req, res, next) => {
     try {
         const projects = await Project.find().sort({ date: -1 });
@@ -85,6 +84,7 @@ app.get('/api/projects', async (req, res, next) => {
     }
 });
 
+// FORMULARIO DE CONTACTO
 app.post('/api/contact', [
   body('name').trim().notEmpty().escape(),
   body('email').isEmail().normalizeEmail(),
@@ -102,7 +102,8 @@ app.post('/api/contact', [
   }
 });
 
-// --- 4. RUTAS ADMINISTRATIVAS ---
+// --- 5. RUTAS ADMINISTRATIVAS ---
+
 app.get('/api/admin/messages', async (req, res, next) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
@@ -122,6 +123,7 @@ app.delete('/api/admin/messages/:id', async (req, res, next) => {
   }
 });
 
+// --- 6. MANEJO DE ERRORES ---
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
