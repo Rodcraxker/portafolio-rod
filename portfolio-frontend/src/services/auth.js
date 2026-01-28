@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Detecta automáticamente si usa Render o Localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// Usamos la variable de entorno, y si falla, apuntamos directamente a Render
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portafolio-rod-final.onrender.com/api';
 const API_URL = `${API_BASE_URL}/auth`;
 
 export const login = async (email, password) => {
