@@ -14,6 +14,11 @@ const User = require('./models/User');
 
 const app = express();
 
+
+
+// SOLUCIÓN AL ERROR DE LOS LOGS: Confiar en el proxy de Render
+app.set('trust proxy', 1);
+
 // --- 1. CONFIGURACIÓN DE CORS MANUAL (DEBE IR PRIMERO) ---
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); 
