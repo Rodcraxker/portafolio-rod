@@ -14,15 +14,14 @@ const User = require('./models/User');
 
 const app = express();
 
-// --- 1. CONFIGURACIÓN DE CORS MANUAL (ELIMINA BLOQUEOS DE VERCEL) ---
+// --- 1. CONFIGURACIÓN DE CORS MANUAL (DEBE IR PRIMERO) ---
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   
-  // Responder inmediatamente a la petición de verificación (OPTIONS)
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(200); // Responde 200 al preflight inmediatamente
   }
   next();
 });
