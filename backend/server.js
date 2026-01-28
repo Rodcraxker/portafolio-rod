@@ -43,10 +43,15 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // --- 3. CONEXIÓN A LA BASE DE DATOS ---
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ Conexión segura a MongoDB Atlas'))
-    .catch(err => console.error('❌ Error de conexión:', err));
-
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000, // Falla rápido si no conecta
+    socketTimeoutMS: 45000,         // Cierra sockets inactivos
+})
+.then(() => console.log('✅ Conexión segura a MongoDB Atlas'))
+.catch(err => {
+    console.error('❌ Error crítico de conexión:', err.message);
+    process.exit(1); // Detiene el servidor si no hay DB
+});
 // --- 4. RUTAS PÚBLICAS ---
 
 app.get('/', (req, res) => {
