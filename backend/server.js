@@ -27,10 +27,16 @@ app.use('/api/', limiter);
 
 // IMPORTANTE: Agregué DELETE y OPTIONS para que el AdminPanel funcione
 app.use(cors({
-  origin: ['https://portafolio-rod-final.vercel.app', 'http://localhost:5173'], 
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [
+    'https://portafolio-rod-ui85-rodcraxkers-projects.vercel.app', 
+    'http://localhost:5173',
+    'https://portafolio-rod-ui85.vercel.app' // Te sugiero agregar esta que es la URL corta
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
 }));
+
+app.use(express.json()); // Middleware para leer JSON
 
 app.use(express.json({ limit: '10kb' }));
 
